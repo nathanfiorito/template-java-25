@@ -1,0 +1,63 @@
+name: Simulated CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Load Parameters
+        id: params
+        run: |
+          # Simple simulation of reading from YAML
+          APP_NAME=$(grep 'app_name:' infra/pipeline/parameters.yaml | awk '{print $2}' | tr -d '"')
+          echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+          echo "Selected Environment: ${{ github.event.inputs.environment || 'staging' }}"
+
+      - name: Build with Maven
+        run: |
+          echo "🚀 Starting Build for $APP_NAME..."
+          cd app && mvn clean package -DskipTests
+          echo "Build successful!"
+
+      - name: Run Architecture Tests (ArchUnit)
+        run: |
+          echo "📏 Verifying Architectural Rules..."
+          cd app && mvn test -Dtest=ArchitectureTest
+          echo "Architecture verified!"
+
+      - name: Simulated Deploy
+        run: |
+          ENV="${{ github.event.inputs.environment || 'staging' }}"
+          echo "🌐 Deploying $APP_NAME to $ENV environment..."
+          echo "Fetching environment parameters from infra/pipeline/parameters.yaml..."
+          
+          # Simulating reading environment specific details
+          REGION=$(grep -A 5 "$ENV:" infra/pipeline/parameters.yaml | grep "region:" | awk '{print $2}' | tr -d '"')
+          STRATEGY=$(grep "deployment_strategy:" infra/pipeline/parameters.yaml | awk '{print $2}' | tr -d '"')
+          
+          echo "📍 Target Region: $REGION"
+          echo "🔄 Strategy: $STRATEGY"
+          echo "✅ Deployment simulation to $ENV completed successfully!"

@@ -1,0 +1,14 @@
+app_name: "template-java-25"
+environments:
+  staging:
+    region: "sa-east-1"
+    instance_type: "t3.medium"
+    auto_deploy: true
+  production:
+    region: "sa-east-1"
+    instance_type: "t3.large"
+    auto_deploy: false
+    approval_required: true
+
+deployment_strategy: "blue-green"
+notification_channel: "#deploy-alerts"
