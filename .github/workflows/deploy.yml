@@ -2,7 +2,7 @@ name: Simulated CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   workflow_dispatch:
     inputs:
       environment:
@@ -34,7 +34,17 @@ jobs:
           # Simple simulation of reading from YAML
           APP_NAME=$(grep 'app_name:' infra/pipeline/parameters.yaml | awk '{print $2}' | tr -d '"')
           echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
-          echo "Selected Environment: ${{ github.event.inputs.environment || 'staging' }}"
+          
+          # Determine environment based on branch or input
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref_name }}" == "main" ]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          echo "TARGET_ENV=$ENV" >> $GITHUB_ENV
+          echo "Selected Environment: $ENV"
 
       - name: Build with Maven
         run: |
@@ -50,7 +60,7 @@ jobs:
 
       - name: Simulated Deploy
         run: |
-          ENV="${{ github.event.inputs.environment || 'staging' }}"
+          ENV="${{ env.TARGET_ENV }}"
           echo "🌐 Deploying $APP_NAME to $ENV environment..."
           echo "Fetching environment parameters from infra/pipeline/parameters.yaml..."
           
@@ -61,3 +71,23 @@ jobs:
           echo "📍 Target Region: $REGION"
           echo "🔄 Strategy: $STRATEGY"
           echo "✅ Deployment simulation to $ENV completed successfully!"
+
+  create-pr-to-main:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'develop' && github.event_name == 'push'
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request to Main
+        run: |
+          echo "🚀 Deployment to staging (develop) successful. Creating PR to main..."
+          gh pr create \
+            --base main \
+            --head develop \
+            --title "[Auto] Promote develop to main" \
+            --body "Automated Pull Request created after successful deployment to staging from the develop branch." \
+            || echo "PR already exists or could not be created."

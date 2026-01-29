@@ -1,0 +1,54 @@
+name: CI Feature Branches
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'test/**'
+      - 'chore/**'
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build and Test with Maven
+        run: |
+          echo "🚀 Running Build and Tests for branch ${{ github.ref_name }}..."
+          cd app && mvn clean package
+          echo "✅ Build and Tests completed successfully!"
+
+  create-pr:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request to Develop
+        run: |
+          echo "🔀 Creating Pull Request to develop..."
+          gh pr create \
+            --base develop \
+            --head ${{ github.ref_name }} \
+            --title "[Auto] Merge ${{ github.ref_name }} into develop" \
+            --body "Automated Pull Request created after successful CI build and tests on branch ${{ github.ref_name }}." \
+            || echo "PR already exists or could not be created."
