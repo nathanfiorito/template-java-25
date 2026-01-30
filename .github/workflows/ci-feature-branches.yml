@@ -9,9 +9,6 @@ on:
       - 'refactor/**'
       - 'test/**'
       - 'chore/**'
-  pull_request:
-    branches:
-      - 'main'
 
 jobs:
   build-and-test:
