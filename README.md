@@ -70,5 +70,7 @@ docker run -p 8080:8080 template-java-25
 - **Unit Tests:** Focus on Domain and Application layers.
 - **Integration Tests:** Focus on Infrastructure adapters.
 
+
+
 ---
 **Maintained by Nathan Fiorito**
